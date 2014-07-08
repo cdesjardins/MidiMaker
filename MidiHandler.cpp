@@ -18,18 +18,30 @@
 #include <Arduino.h>
 #include "MidiHandler.h"
 
+MidiHandler::MidiHandler()
+{
+    Serial.begin(31250);
+    sendMidi(0xB0, 0x07, 120);
+    sendMidi(0xB0, 0, 0x79);
+    sendMidi(0xC0, 26, 0);
+}
+
 void MidiHandler::sendMidi(byte cmd, byte data1, byte data2)
 {
-    Serial.write(cmd);
-    Serial.write(data1);
-    Serial.write(data2);
-    
     Serial1.print("Write: ");
     Serial1.print(cmd, HEX);
     Serial1.print(" ");
     Serial1.print(data1, HEX);
     Serial1.print(" ");
-    Serial1.println(data2, HEX);
+
+    Serial.write(cmd);
+    Serial.write(data1);
+    if ((cmd & 0xF0) <= 0xB0)
+    {
+        Serial.write(data2);
+        Serial1.print(data2, HEX);
+    }
+    Serial1.println("");
 }
 
 bool MidiHandler::recvMidi(byte &cmd, byte &data1, byte &data2)

@@ -71,13 +71,52 @@ public:
         _sensorsHandler.clear();
     }
     
-    void playSounds()
+    /* Debug code */
+    bool button(int button_num)
     {
+        return (!(digitalRead(button_num)));
+    }
+
+    void debugCode()
+    {
+        /*
         if ((millis() - _t0) > 100)
         {
             Serial1.print(_sensorsHandler[0]->getDistance());
             Serial1.print("   \r");
             _t0 = millis();
+        }
+        */
+        static bool on = false;
+        static bool btn = false;
+        bool sendCmd = false;
+
+        if (btn == false)
+        {
+            if (button(MM_BUTTON1) || button(MM_BUTTON2) || button(MM_BUTTON3))
+            {
+                btn = true;
+            }
+        }
+        else
+        {
+            if (!(button(MM_BUTTON1) || button(MM_BUTTON2) || button(MM_BUTTON3)))
+            {
+                btn = false;
+                sendCmd = true;
+            }
+        }
+        if (sendCmd == true)
+        {
+            on = !on;
+            if (on == true)
+            {
+                _midiHandler.sendMidi(0x90, 0x3c, 64);
+            }
+            else
+            {
+                _midiHandler.sendMidi(0x90, 0x3c, 0x00);
+            }
         }
     }
     
@@ -91,7 +130,7 @@ public:
         {
             (*it)->process();
         }
-        playSounds();
+        debugCode();
     }
     
 private:
@@ -106,6 +145,14 @@ MidiMaker *g_midiMaker;
 
 void setup()
 {
+    pinMode(MM_BUTTON1, INPUT);
+    pinMode(MM_BUTTON2, INPUT);
+    pinMode(MM_BUTTON3, INPUT);
+
+    digitalWrite(MM_BUTTON1, HIGH);
+    digitalWrite(MM_BUTTON2, HIGH);
+    digitalWrite(MM_BUTTON3, HIGH);
+
     Serial1.begin(115200);
     g_midiMaker = new MidiMaker();
 }

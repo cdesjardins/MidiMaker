@@ -21,10 +21,8 @@
 class MidiHandler
 {
 public:
-    MidiHandler()
-    {
-        Serial.begin(31250);
-    }
+    MidiHandler();
+
     void sendMidi(byte cmd, byte data1, byte data2);
     bool recvMidi(byte &cmd, byte &data1, byte &data2);
     
