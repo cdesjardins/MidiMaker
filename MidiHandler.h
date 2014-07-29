@@ -29,6 +29,8 @@ public:
     void process();
     
 private:
+    void debugMidiOut(byte cmd, byte data1, byte data2) const;
+
     byte getByte();
 };
 

@@ -45,17 +45,18 @@ class MidiMaker
 public:
     MidiMaker()
     :_statusLedA(MM_STAT_LED_1),
-    _statusLedB(MM_STAT_LED_2),
-    _t0(0)
+    _statusLedB(MM_STAT_LED_2)
     {
         _sensorsHandler.push_back(new SensorHandler(MM_SENSOR_1));
         _sensorsHandler.push_back(new SensorHandler(MM_SENSOR_2));
+        /*
         _sensorsHandler.push_back(new SensorHandler(MM_SENSOR_3));
         _sensorsHandler.push_back(new SensorHandler(MM_SENSOR_4));
         _sensorsHandler.push_back(new SensorHandler(MM_SENSOR_5));
         _sensorsHandler.push_back(new SensorHandler(MM_SENSOR_6));
         _sensorsHandler.push_back(new SensorHandler(MM_SENSOR_7));
         _sensorsHandler.push_back(new SensorHandler(MM_SENSOR_8));
+        */
         _statusLedA.blink(11);
         _statusLedB.blink(10);
     }
@@ -77,45 +78,38 @@ public:
         return (!(digitalRead(button_num)));
     }
 
-    void debugCode()
+    void setupModes()
     {
-        /*
+        static unsigned long _t0 = 0;
+        static int sensorSelect = 0;
         if ((millis() - _t0) > 100)
         {
-            Serial1.print(_sensorsHandler[0]->getDistance());
-            Serial1.print("   \r");
             _t0 = millis();
-        }
-        */
-        static bool on = false;
-        static bool btn = false;
-        bool sendCmd = false;
-
-        if (btn == false)
-        {
-            if (button(MM_BUTTON1) || button(MM_BUTTON2) || button(MM_BUTTON3))
+            if (button(MM_BUTTON1))
             {
-                btn = true;
+                _sensorsHandler[sensorSelect]->switchNote();
+            }
+            if (button(MM_BUTTON2))
+            {
+                _sensorsHandler[sensorSelect]->switchModulationType();
+            }
+            if (button(MM_BUTTON3))
+            {
+                sensorSelect = (sensorSelect + 1) % _sensorsHandler.size();
+                Serial1.print("Sensor selected: ");
+                Serial1.println(sensorSelect);
             }
         }
-        else
+    }
+    void processSensors()
+    {
+        std::vector<SensorHandler*>::iterator it;
+        for (it = _sensorsHandler.begin(); it != _sensorsHandler.end(); it++)
         {
-            if (!(button(MM_BUTTON1) || button(MM_BUTTON2) || button(MM_BUTTON3)))
+            byte b1, b2, b3;
+            if ((*it)->getCommand(&b1, &b2, &b3) == true)
             {
-                btn = false;
-                sendCmd = true;
-            }
-        }
-        if (sendCmd == true)
-        {
-            on = !on;
-            if (on == true)
-            {
-                _midiHandler.sendMidi(0x90, 0x3c, 64);
-            }
-            else
-            {
-                _midiHandler.sendMidi(0x90, 0x3c, 0x00);
+                _midiHandler.sendMidi(b1, b2, b3);
             }
         }
     }
@@ -125,12 +119,8 @@ public:
         _statusLedA.process();
         _statusLedB.process();
         _midiHandler.process();
-        std::vector<SensorHandler*>::iterator it;
-        for (it = _sensorsHandler.begin(); it != _sensorsHandler.end(); it++)
-        {
-            (*it)->process();
-        }
-        debugCode();
+        processSensors();
+        setupModes();
     }
     
 private:
@@ -138,7 +128,6 @@ private:
     StatusLed _statusLedB;
     MidiHandler _midiHandler;
     std::vector<SensorHandler*> _sensorsHandler;
-    unsigned long _t0;
 };
 
 MidiMaker *g_midiMaker;

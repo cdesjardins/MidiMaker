@@ -17,31 +17,46 @@
 
 #include <Arduino.h>
 #include "MidiHandler.h"
-
+#include "MidiCommands.h"
 MidiHandler::MidiHandler()
 {
     Serial.begin(31250);
-    sendMidi(0xB0, 0x07, 120);
-    sendMidi(0xB0, 0, 0x79);
-    sendMidi(0xC0, 26, 0);
 }
 
-void MidiHandler::sendMidi(byte cmd, byte data1, byte data2)
+void MidiHandler::debugMidiOut(byte cmd, byte data1, byte data2) const
 {
     Serial1.print("Write: ");
     Serial1.print(cmd, HEX);
     Serial1.print(" ");
-    Serial1.print(data1, HEX);
-    Serial1.print(" ");
+    if ((cmd & MM_STATUS_MASK) == MM_PITCH_WHEEL)
+    {
+        unsigned int pitch;
+        pitch = data2;
+        pitch = (pitch << 7) | data1;
+        Serial1.print(pitch, HEX);
+    }
+    else
+    {
+        Serial1.print(data1, HEX);
+        if (((cmd & MM_STATUS_MASK) != MM_CHANNEL_PRESSURE) && ((cmd & MM_STATUS_MASK) != MM_PATCH_CHANGE))
+        {
+            Serial1.print(" ");
+            Serial1.print(data2, HEX);
+        }
+    }
+    Serial1.println("");
+}
+
+void MidiHandler::sendMidi(byte cmd, byte data1, byte data2)
+{
+    debugMidiOut(cmd, data1, data2);
 
     Serial.write(cmd);
     Serial.write(data1);
-    if ((cmd & 0xF0) <= 0xB0)
+    if (((cmd & MM_STATUS_MASK) != MM_CHANNEL_PRESSURE) && ((cmd & MM_STATUS_MASK) != MM_PATCH_CHANGE))
     {
         Serial.write(data2);
-        Serial1.print(data2, HEX);
     }
-    Serial1.println("");
 }
 
 bool MidiHandler::recvMidi(byte &cmd, byte &data1, byte &data2)
@@ -91,7 +106,7 @@ void MidiHandler::process()
     byte cmd;
     byte data1;
     byte data2;
-    if ((recvMidi(cmd, data1, data2) == true) && (cmd < 0xf0))
+    if (recvMidi(cmd, data1, data2) == true)
     {
         Serial1.print("MidiCommand: 0x");
         Serial1.print(cmd, HEX);
@@ -99,6 +114,5 @@ void MidiHandler::process()
         Serial1.print(data1, HEX);
         Serial1.print(" 0x");
         Serial1.println(data2, HEX);
-
     }
 }
