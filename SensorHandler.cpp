@@ -34,7 +34,7 @@ int SensorHandler::readAvgPin(int pin) const
     // Then throw away the highest quarter, and the lowest quarter
     // Then average the remaining half samples
     // to try to get a stable analog input
-    int pins[60];
+    int pins[120];
     for (int i = 0; i < ARRAY_SIZE(pins); i++)
     {
         pins[i] = analogRead(pin);
