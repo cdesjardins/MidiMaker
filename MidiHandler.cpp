@@ -23,34 +23,9 @@ MidiHandler::MidiHandler()
     Serial.begin(31250);
 }
 
-void MidiHandler::debugMidiOut(byte cmd, byte data1, byte data2) const
-{
-    Serial1.print("Write: ");
-    Serial1.print(cmd, HEX);
-    Serial1.print(" ");
-    if ((cmd & MM_STATUS_MASK) == MM_PITCH_WHEEL)
-    {
-        unsigned int pitch;
-        pitch = data2;
-        pitch = (pitch << 7) | data1;
-        Serial1.print(pitch, HEX);
-    }
-    else
-    {
-        Serial1.print(data1, HEX);
-        if (((cmd & MM_STATUS_MASK) != MM_CHANNEL_PRESSURE) && ((cmd & MM_STATUS_MASK) != MM_PATCH_CHANGE))
-        {
-            Serial1.print(" ");
-            Serial1.print(data2, HEX);
-        }
-    }
-    Serial1.println("");
-}
 
 void MidiHandler::sendMidi(byte cmd, byte data1, byte data2)
 {
-    debugMidiOut(cmd, data1, data2);
-
     Serial.write(cmd);
     Serial.write(data1);
     if (((cmd & MM_STATUS_MASK) != MM_CHANNEL_PRESSURE) && ((cmd & MM_STATUS_MASK) != MM_PATCH_CHANGE))

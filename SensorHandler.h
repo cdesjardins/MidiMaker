@@ -28,12 +28,15 @@ enum SensorHandlerMode
 class SensorHandler
 {
 public:
-    SensorHandler(int pin)
+    SensorHandler(int pin, const char* name)
     :_pin(pin),
     _t0(0),
     _notePlaying(false),
     _note(0x3C),
-    _mode(SHM_PITCH)
+    _mode(SHM_PITCH),
+    _name(name),
+    _pinReadsIndex(0),
+    _reads(0)
     {
         analogReference(EXTERNAL);
     }
@@ -41,19 +44,26 @@ public:
     void switchNote();
     void switchModulationType();
 private:
-    int getDistance() const;
+    int getDistance(double *stdDev);
     int getNote();
     bool getNoteOnCommand(const int distance, byte* b1, byte* b2, byte* b3);
     bool getPitchCommand(const int distance, byte* b1, byte* b2, byte* b3);
     bool getBrightnessCommand(const int distance, byte* b1, byte* b2, byte* b3);
     bool getTimbreCommand(const int distance, byte* b1, byte* b2, byte* b3);
+    void debugMidiOut(int distance, double stdDev, byte cmd, byte data1, byte data2) const;
+    void printHex(byte h) const;
+    double computeStdDev(int start, int end, int avg) const;
 
     int scaleDistance(int distance, unsigned long max) const;
-    int readAvgPin(int pin) const;
+    int readAvgPin(int pin, double *stdDev);
     int _pin;
     bool _notePlaying;
     unsigned long _t0;
     int _note;
     SensorHandlerMode _mode;
+    const char* _name;
+    int _pinReads[20];
+    int _pinReadsIndex;
+    int _reads;
 };
 #endif

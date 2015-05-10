@@ -18,36 +18,70 @@
 #include <Arduino.h>
 #include "SensorHandler.h"
 #include "MidiCommands.h"
+#include "Statistic.h"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+#define SH_MAX_DISTANCE 150
 
 static int compar(const void* a, const void* b)
 {
     return (*(int*)a - *(int*)b);
 }
-
-int SensorHandler::readAvgPin(int pin) const
+#if 0
+double SensorHandler::computeStdDev(int start, int end, int avg) const
 {
+    double ret;
+    double sum = 0;
+    for (int i = start; i < end; i++)
+    {
+        sum += (_pinReads[i] - avg) * (_pinReads[i] - avg);
+    }
 
+    ret = sqrt(sum / (end - start));
+    if (isnan(ret))
+    {
+        for (int i = start; i < end; i++)
+        {
+            Serial1.print(_pinReads[i]);
+            Serial1.print(",");
+        }
+        Serial1.print("sizeof: ");
+        Serial1.print(sizeof(double));
+        Serial1.println(sum);
+    }
+    return ret;
+}
+#else
+double SensorHandler::computeStdDev(int start, int end, int avg) const
+{
+}
+#endif
+
+int SensorHandler::readAvgPin(int pin, double *stdDev)
+{
+    int total = -1;
     // Read the analog pin multiple times.
     // Then sort all of those reads.
     // Then throw away the highest quarter, and the lowest quarter
     // Then average the remaining half samples
     // to try to get a stable analog input
-    int pins[120];
-    for (int i = 0; i < ARRAY_SIZE(pins); i++)
+    _pinReads[_pinReadsIndex] = analogRead(pin);
+    _pinReadsIndex++;
+    if (_pinReadsIndex == ARRAY_SIZE(_pinReads))
     {
-        pins[i] = analogRead(pin);
+        Statistic stats;
+        qsort(_pinReads, ARRAY_SIZE(_pinReads), sizeof(_pinReads[0]), compar);
+        int start = ARRAY_SIZE(_pinReads) / 4;
+        int end = ARRAY_SIZE(_pinReads) - start;
+        for (int i = start; i < end; i++)
+        {
+            stats.add(_pinReads[i]);
+        }
+        _pinReadsIndex = 0;
+        *stdDev = stats.pop_stdev();
+        total = stats.average();
     }
-    qsort(pins, ARRAY_SIZE(pins), sizeof(pins[0]), compar);
-    int start = ARRAY_SIZE(pins) / 4;
-    int end = ARRAY_SIZE(pins) - start;
-    int total = 0;
-    for (int i = start; i < end; i++)
-    {
-        total += pins[i];
-    }
-    total /= (end - start);
+
     return total;
 }
 
@@ -59,10 +93,10 @@ int SensorHandler::scaleDistance(int distance, unsigned long max) const
     return d;
 }
 
-int SensorHandler::getDistance() const
+int SensorHandler::getDistance(double *stdDev)
 {
-    int ret = readAvgPin(_pin);
-    if (ret < 100)
+    int ret = readAvgPin(_pin, stdDev);
+    if (((ret < SH_MAX_DISTANCE) || (*stdDev > 5.0)) && (ret != -1))
     {
         ret = 0;
     }
@@ -151,9 +185,10 @@ bool SensorHandler::getTimbreCommand(const int distance, byte* b1, byte* b2, byt
 
 bool SensorHandler::getCommand(byte* b1, byte* b2, byte* b3)
 {
+    double stdDev;
     bool sendCmd = false;
-    int distance = getDistance();
-    if ((millis() - _t0) > 10)
+    int distance = getDistance(&stdDev);
+    if ((distance != -1) && ((millis() - _t0) > 10))
     {
         _t0 = millis();
         if ((_notePlaying == false) || (distance == 0))
@@ -175,6 +210,61 @@ bool SensorHandler::getCommand(byte* b1, byte* b2, byte* b3)
                     break;
             }
         }
+        if ((sendCmd == true) && (distance != 0))
+        {
+            debugMidiOut(distance, stdDev, *b1, *b2, *b3);
+        }
     }
     return sendCmd;
+}
+
+void SensorHandler::printHex(byte h) const
+{
+    if (h < 0x10)
+    {
+        Serial1.print("0");
+    }
+    Serial1.print(h, HEX);
+}
+
+void SensorHandler::debugMidiOut(int distance, double stdDev, byte cmd, byte data1, byte data2) const
+{
+    Serial1.print(_name);
+    Serial1.print(": ");
+    printHex(cmd);
+    Serial1.print(" ");
+    if ((cmd & MM_STATUS_MASK) == MM_PITCH_WHEEL)
+    {
+        unsigned int pitch;
+        pitch = data2;
+        pitch = (pitch << 7) | data1;
+        printHex(pitch);
+        Serial1.print("   ");
+    }
+    else
+    {
+        printHex(data1);
+        if (((cmd & MM_STATUS_MASK) != MM_CHANNEL_PRESSURE) && ((cmd & MM_STATUS_MASK) != MM_PATCH_CHANGE))
+        {
+            Serial1.print(" ");
+            printHex(data2);
+        }
+        else
+        {
+            Serial1.print("   ");
+        }
+    }
+    Serial1.print(" Distance: ");
+    if (distance < 100)
+    {
+        Serial1.print("0");
+    }
+    if (distance < 10)
+    {
+        Serial1.print("0");
+    }
+    Serial1.print(distance);
+    Serial1.print(" stdDev: ");
+    Serial1.print(stdDev);
+    Serial1.println("");
 }

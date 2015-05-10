@@ -30,14 +30,14 @@
 #define MM_BUTTON3      4
 #define MM_STAT_LED_1   7
 #define MM_STAT_LED_2   6
-#define MM_SENSOR_1     15 /* Analog */
-#define MM_SENSOR_2     14 /* Analog */
-#define MM_SENSOR_3     13 /* Analog */
-#define MM_SENSOR_4     12 /* Analog */
-#define MM_SENSOR_5     11 /* Analog */
-#define MM_SENSOR_6     10 /* Analog */
-#define MM_SENSOR_7     9  /* Analog */
-#define MM_SENSOR_8     8  /* Analog */
+#define MM_SENSOR_1     A1   /* Analog */
+#define MM_SENSOR_2     A2   /* Analog */
+#define MM_SENSOR_3     A4   /* Analog */
+#define MM_SENSOR_4     A7   /* Analog */
+#define MM_SENSOR_5     A8   /* Analog */
+#define MM_SENSOR_6     A11  /* Analog */
+#define MM_SENSOR_7     A13  /* Analog */
+#define MM_SENSOR_8     A15  /* Analog */
 
 
 class MidiMaker
@@ -47,18 +47,16 @@ public:
     :_statusLedA(MM_STAT_LED_1),
     _statusLedB(MM_STAT_LED_2)
     {
-        _sensorsHandler.push_back(new SensorHandler(MM_SENSOR_1));
-        _sensorsHandler.push_back(new SensorHandler(MM_SENSOR_2));
-        /*
-        _sensorsHandler.push_back(new SensorHandler(MM_SENSOR_3));
-        _sensorsHandler.push_back(new SensorHandler(MM_SENSOR_4));
-        _sensorsHandler.push_back(new SensorHandler(MM_SENSOR_5));
-        _sensorsHandler.push_back(new SensorHandler(MM_SENSOR_6));
-        _sensorsHandler.push_back(new SensorHandler(MM_SENSOR_7));
-        _sensorsHandler.push_back(new SensorHandler(MM_SENSOR_8));
-        */
-        _statusLedA.blink(11);
-        _statusLedB.blink(10);
+        //_sensorsHandler.push_back(new SensorHandler(MM_SENSOR_1, "Sensor1"));
+        //_sensorsHandler.push_back(new SensorHandler(MM_SENSOR_2, "Sensor2"));
+        //_sensorsHandler.push_back(new SensorHandler(MM_SENSOR_3, "Sensor3"));
+        //_sensorsHandler.push_back(new SensorHandler(MM_SENSOR_4, "Sensor4"));
+        //_sensorsHandler.push_back(new SensorHandler(MM_SENSOR_5, "Sensor5"));
+        //_sensorsHandler.push_back(new SensorHandler(MM_SENSOR_6, "Sensor6"));
+        _sensorsHandler.push_back(new SensorHandler(MM_SENSOR_7, "Sensor7"));
+        //_sensorsHandler.push_back(new SensorHandler(MM_SENSOR_8, "Sensor8"));
+        //_statusLedA.blink(11);
+        //_statusLedB.blink(10);
     }
     
     ~MidiMaker()
@@ -143,6 +141,7 @@ void setup()
     digitalWrite(MM_BUTTON3, HIGH);
 
     Serial1.begin(115200);
+    Serial1.println("MIDI Maker, Chris Desjardins (C) 2015");
     g_midiMaker = new MidiMaker();
 }
 
